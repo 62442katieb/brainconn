@@ -11,6 +11,8 @@ def degrees_dir(CIJ):
     Node degree is the number of links connected to the node. The indegree
     is the number of inward links and the outdegree is the number of
     outward links.
+    Directed in-degree: :math:`k_i^{in} = \displaystyle\sum_{j \in N} a_{ji}`
+    Directed in-degree: :math:`k_i^{out} = \displaystyle\sum_{j \in N} a_{ij}`
 
     Parameters
     ----------
@@ -41,6 +43,8 @@ def degrees_dir(CIJ):
 def degrees_und(CIJ):
     """
     Node degree is the number of links connected to the node.
+    Binary degree: :math:`k_i = \displaystyle\sum_{j \in N} a_{ijj}`
+    Weighted degree: :math:`k_i^w = \displaystyle\sum_{j \in N} w_{ij}`
 
     Parameters
     ----------
@@ -141,26 +145,86 @@ def strengths_dir(CIJ):
     return istr + ostr
 
 
-def strengths_und(CIJ):
+def strengths(adj, flavor='auto', norm=False):
     """
-    Node strength is the sum of weights of links connected to the node.
+    Node strength is the sum of weights of links connected to the node,
+    the analog of degree in weighted networks.
+    Strength: :math:`s_i = \displaystyle\sum_{j \neq i} w_{ij}`
+    Normalized strength: :math:`s_i^{\prime} = \frac{1}{N - 1} \displaystyle\sum_{j \neq i} w_{ij}`
+
+    Positive strength: :math:`s_i^+ = \displaystyle\sum_{j \neq i}^+ w_{ij}`
+    Negative strength: :math:`s_i^- = - \displaystyle\sum_{j \neq i}^- w_{ij}`
+
+    Unitary, normalized strength: :math:`s_i^{*} = s_i^{\prime +} - s_i^{\prime -} \left(\frac{s_i^{\prime -}}{s_i^{\prime +} + s_i^{\prime -}}\right)`
 
     Parameters
     ----------
-    CIJ : NxN :obj:`numpy.ndarray`
-        undirected weighted connection matrix
+    mat : NxN :obj:`numpy.ndarray`
+        connection matrix
+    flavor : {'bu', 'wu', 'bd', 'wd', 'auto'}, optional
+        type of connection matrix `mat`: binary or weighted (b or w) and
+        directed or undirected (d or u). 'auto' detects these from the data using
+        `check_mtx_fmt`.
+    norm : :obj:`bool`
+        if True, normalized strength is returned. Default is False.
 
     Returns
     -------
-    str : Nx1 :obj:`numpy.ndarray`
+    strength : Nx1 :obj:`numpy.ndarray`
         node strengths
+    flav : :obj:`str`
+        type of matrix fed in, if  `flavor='auto'`
+    Spos : Nx1 :obj:`numpy.ndarray`
+        nodal strength of positive weights, if  `flavor=''`
+    Sneg : Nx1 :obj:`numpy.ndarray`
+        nodal strength of positive weights
+    vpos : float
+        total positive weight
+    vneg : float
+        total negative weight
     """
-    return np.sum(CIJ, axis=0)
+    if flavor == 'auto':
+        flav = check_mtx_fmt(adj)
+        return flav
+
+    adjacency = adj.copy()
+    np.fill_diagonal(adjacency, 0)
+    if flavor == 'wu' or (flavor == 'auto' and (flav.bin_status == 'wei' and flav.direction == 'und')):
+        strength = np.sum(adjacency, axis=0)
+        if norm:
+            strength_norm = strength/(len(adj[0])-1)
+            strength = strength_norm
+        elif:
+            strength = strength
+        return strength
+    elif flavor == 'wd' or (flavor == 'auto' and (flav.bin_status == 'wei' and flav.direction == 'dir')):
+        Spos = np.sum(adjacency * (adjacency > 0), axis=0)  # positive strengths
+        Sneg = np.sum(adjacency * (adjacency < 0), axis=0)  # negative strengths
+
+        vpos = np.sum(Spos)  # total positive weight
+        vneg = np.sum(Sneg)  # total negative weight
+        if norm:
+            #UNITARY NORMALIZED
+            strength_unit_norm = (Spos / (len(adj[0])-1)) - (Sneg / (len(adj[0])-1)) (Sneg/(Sneg + Spos))
+            return strength_unit_norm
+        elif:
+            return Spos, Sneg, vpos, vneg
+    elif flavor == 'bu' or flavor == 'bd' or (flavor == 'auto' and flav.bin_status == 'bin'):
+        #calculate degrees
+        degree = np.sum(adj, axis=0)
+        if norm:
+            #NOPE
+            return 'No such normalized degree exists.'
+        elif:
+            return degree
+
 
 
 def strengths_und_sign(W):
     """
     Node strength is the sum of weights of links connected to the node.
+    Positive strength: :math:`s_i^+ = \displaystyle\sum_{j \neq i}^+ w_{ij}`
+    Negative strength: :math:`s_i^- = - \displaystyle\sum_{j \neq i}^- w_{ij}`
 
     Parameters
     ----------
